@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>CSV Builder</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <style>
+        :root {
+            font-family: system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            margin: 24px;
+        }
+
+        h1 {
+            margin: 0 0 12px;
+            font-size: 20px;
+        }
+
+        .row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        input[type="text"] {
+            padding: 8px;
+            min-width: 320px;
+        }
+
+        button {
+            padding: 8px 12px;
+            cursor: pointer;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            background: #fafafa;
+        }
+
+            button.primary {
+                background: #0a66c2;
+                color: white;
+                border-color: #0a66c2;
+            }
+
+            button.danger {
+                background: #e11d48;
+                color: white;
+                border-color: #e11d48;
+            }
+
+            button:disabled {
+                opacity: .6;
+                cursor: not-allowed;
+            }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 12px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+        }
+
+        th {
+            background: #f3f4f6;
+            text-align: left;
+        }
+
+        td input {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 6px;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+            flex-wrap: wrap;
+        }
+
+        .hint {
+            color: #6b7280;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>CSV Builder</h1>
+
+    <div class="row">
+        <label for="columns"><strong>Columns</strong> (comma-separated):</label>
+        <input id="columns" type="text" placeholder="e.g. First Name, Last Name, Email, Role" />
+        <button id="makeTable" class="primary">Create Table</button>
+    </div>
+    <div class="hint" style="margin-top:6px;">You can recreate the table any time—this resets current rows.</div>
+
+    <div id="tableArea" style="margin-top:16px; display:none;">
+        <table id="dataTable" aria-label="Data Entry Table"></table>
+
+        <div class="controls">
+            <button id="addRow">Add Row</button>
+            <button id="clearRows" class="danger">Clear All Rows</button>
+            <button id="downloadCsv" class="primary">Generate CSV</button>
+            <label>
+                File name:
+                <input id="fileName" type="text" value="data.csv" style="min-width:160px;" />
+            </label>
+        </div>
+        <div class="hint">Note: CSV is generated <em>without</em> a header row, and blank rows are skipped automatically.</div>
+    </div>
+
+    <script>
+        const columnsInput = document.getElementById('columns');
+        const makeTableBtn = document.getElementById('makeTable');
+        const tableArea = document.getElementById('tableArea');
+        const dataTable = document.getElementById('dataTable');
+        const addRowBtn = document.getElementById('addRow');
+        const clearRowsBtn = document.getElementById('clearRows');
+        const downloadBtn = document.getElementById('downloadCsv');
+        const fileNameInput = document.getElementById('fileName');
+
+        let headers = [];
+        const includeHeader = false; // per your request, do not include header row
+
+        function sanitizeHeaders(raw) {
+            return raw
+                .split(',')
+                .map(h => h.trim())
+                .filter(h => h.length > 0);
+        }
+
+        function buildTable() {
+            const thead = document.createElement('thead');
+            const trh = document.createElement('tr');
+            headers.forEach(h => {
+                const th = document.createElement('th');
+                th.textContent = h;
+                trh.appendChild(th);
+            });
+            const thDel = document.createElement('th');
+            thDel.textContent = 'Actions';
+            trh.appendChild(thDel);
+            thead.appendChild(trh);
+
+            const tbody = document.createElement('tbody');
+            dataTable.innerHTML = '';
+            dataTable.appendChild(thead);
+            dataTable.appendChild(tbody);
+        }
+
+        function addRow(initialValues = []) {
+            const tbody = dataTable.querySelector('tbody');
+            const tr = document.createElement('tr');
+            headers.forEach((h, i) => {
+                const td = document.createElement('td');
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.placeholder = h;
+                if (initialValues[i] != null) input.value = initialValues[i];
+                td.appendChild(input);
+                tr.appendChild(td);
+            });
+            const tdActions = document.createElement('td');
+            const delBtn = document.createElement('button');
+            delBtn.textContent = 'Delete';
+            delBtn.className = 'danger';
+            delBtn.onclick = () => tr.remove();
+            tdActions.appendChild(delBtn);
+            tr.appendChild(tdActions);
+            tbody.appendChild(tr);
+        }
+
+        function tableToArray() {
+            const rows = [];
+            const tbody = dataTable.querySelector('tbody');
+            [...tbody.rows].forEach(tr => {
+                const values = [...tr.cells].slice(0, headers.length).map(td => td.querySelector('input').value);
+                // Always skip completely blank rows
+                const allBlank = values.every(v => (v ?? '').trim() === '');
+                if (allBlank) return;
+                rows.push(values);
+            });
+            return rows;
+        }
+
+        function csvEscape(value) {
+            const needsQuotes = /[",\n\r]/.test(value);
+            let v = (value ?? '').replace(/"/g, '""');
+            return needsQuotes ? `"${v}"` : v;
+        }
+
+        function downloadCSV() {
+            if (headers.length === 0) {
+                alert('Please create the table by entering column names first.');
+                return;
+            }
+            const rows = tableToArray();
+            const lines = [];
+
+            if (includeHeader) {
+                lines.push(headers.map(csvEscape).join(','));
+            }
+            rows.forEach(r => lines.push(r.map(v => csvEscape(v)).join(',')));
+
+            const csvText = '\uFEFF' + lines.join('\r\n'); // BOM for Excel compatibility
+            const blob = new Blob([csvText], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+
+            let name = (fileNameInput.value || 'data.csv').trim();
+            if (!name.toLowerCase().endsWith('.csv')) name += '.csv';
+            a.download = name;
+
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        makeTableBtn.addEventListener('click', () => {
+            const newHeaders = sanitizeHeaders(columnsInput.value);
+            if (newHeaders.length === 0) {
+                alert('Please enter at least one column name.');
+                return;
+            }
+            headers = newHeaders;
+            buildTable();
+            addRow(); // start with one empty row
+            tableArea.style.display = 'block';
+        });
+
+        addRowBtn.addEventListener('click', () => addRow());
+        clearRowsBtn.addEventListener('click', () => {
+            const tbody = dataTable.querySelector('tbody');
+            tbody.innerHTML = '';
+        });
+        downloadBtn.addEventListener('click', downloadCSV);
+    </script>
+</body>
+</html>
