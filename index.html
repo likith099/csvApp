@@ -2,103 +2,323 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>CSV Builder</title>
+  <title>CSV Builder (Dark)</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
-    :root { font-family: system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
-    body { margin: 24px; }
-    h1 { margin: 0 0 12px; font-size: 20px; }
-    .row, .controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-    input[type="text"], textarea { padding: 8px; min-width: 320px; }
-    button { padding: 8px 12px; cursor: pointer; border: 1px solid #ccc; border-radius: 8px; background: #fafafa; }
-    button.primary { background: #0a66c2; color: #fff; border-color: #0a66c2; }
-    button.danger { background: #e11d48; color: #fff; border-color: #e11d48; }
-    button:disabled { opacity: .6; cursor: not-allowed; }
-    .hint { color: #6b7280; font-size: 12px; }
-    .table-wrapper { overflow-x: auto; margin-top: 16px; display:none; }
-    table { border-collapse: collapse; width: 100%; min-width: 640px; }
-    th, td { border: 1px solid #ddd; padding: 8px; vertical-align: top; }
-    th { background: #f3f4f6; text-align: left; }
-    td input, td textarea { width: 100%; box-sizing: border-box; padding: 6px; border: 1px solid #e5e7eb; border-radius: 6px; }
+    :root {
+      --bg: #0b1020;
+      --bg-elev: #121832;
+      --bg-elev-2: #0f1530;
+      --text: #e5e7eb;
+      --muted: #94a3b8;
+      --primary: #4f46e5;
+      --primary-600: #4338ca;
+      --danger: #ef4444;
+      --danger-600: #dc2626;
+      --border: #233055;
+      --focus: #22d3ee;
+      --input-bg: #0f1a37;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 24px;
+      font-family: system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      color: var(--text);
+      background: radial-gradient(1200px 800px at 10% -10%, #121a34 0%, var(--bg) 60%) fixed;
+    }
+
+    h1 { margin: 0 0 12px; font-size: 22px; font-weight: 700; letter-spacing: .2px; }
+
+    .card {
+      background: linear-gradient(180deg, var(--bg-elev), var(--bg-elev-2));
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.25);
+    }
+
+    .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .stack { display: grid; gap: 10px; }
+
+    label { color: var(--muted); font-size: 13px; }
+
+    input[type="text"] {
+      background: var(--input-bg);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      min-width: 320px;
+      outline: none;
+    }
+    input[type="text"]::placeholder { color: #6b7280; }
+    input[type="text"]:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+    button {
+      padding: 10px 14px;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--bg-elev);
+      color: var(--text);
+      transition: transform .02s ease-in-out, background .2s, border-color .2s;
+    }
+    button:active { transform: translateY(1px); }
+    button.primary {
+      background: var(--primary);
+      border-color: var(--primary-600);
+    }
+    button.primary:hover { background: var(--primary-600); }
+    button.danger {
+      background: var(--danger);
+      border-color: var(--danger-600);
+    }
+    button.danger:hover { background: var(--danger-600); }
+
+    .hint { color: var(--muted); font-size: 12px; }
+
+    .table-wrapper { overflow-x: auto; margin-top: 14px; display:none; }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      min-width: 720px;
+      table-layout: fixed; /* allows column width control */
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: clip;
+    }
+
+    th, td {
+      border-bottom: 1px solid var(--border);
+      padding: 10px;
+      vertical-align: top;
+    }
+    th {
+      background: #0e1730;
+      text-align: left;
+      color: #c7d2fe;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    td input, td textarea {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--input-bg);
+      color: var(--text);
+    }
     td textarea { min-height: 72px; resize: vertical; }
-    .error { outline: 2px solid #e11d48; }
-    :focus-visible { outline: 3px solid #7dd3fc; outline-offset: 2px; }
-    .spacer { flex: 1 1 auto; }
-    .controls label { display: inline-flex; align-items: center; gap: 6px; }
-    .controls input[type="text"] { min-width: 160px; }
+    .error { outline: 2px solid var(--danger); outline-offset: 1px; }
+
+    .controls-top { /* SAFE area: primary actions only */
+      display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 12px;
+    }
+    .controls-top .spacer { flex: 1 1 auto; }
+
+    .danger-zone { /* place destructive control far away */
+      margin-top: 18px;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px dashed var(--danger);
+      background: rgba(239, 68, 68, .06);
+    }
+
+    .danger-zone .row { justify-content: space-between; }
+    .danger-zone small { color: var(--muted); }
+
+    /* Column width sliders panel */
+    .widths-panel {
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #0d142c;
+    }
+    .widths-grid {
+      display: grid;
+      gap: 10px;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    }
+    .width-item {
+      padding: 8px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--bg-elev-2);
+    }
+    .width-item-title { font-size: 12px; color: #cbd5e1; margin-bottom: 6px; }
+    input[type="range"] { width: 100%; }
+
+    /* Focus styles */
+    :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+    /* Badge */
+    .badge {
+      font-size: 11px;
+      padding: 4px 8px;
+      background: #0c1839;
+      border: 1px solid var(--border);
+      color: #a5b4fc;
+      border-radius: 999px;
+    }
+
+    /* Delete row button inside table */
+    .btn-row-del { padding: 6px 10px; border-radius: 8px; font-size: 12px; }
   </style>
 </head>
 <body>
-  <h1>CSV Builder</h1>
+  <h1>CSV Builder <span class="badge">Dark</span></h1>
 
-  <div class="row" role="group" aria-label="Table setup">
-    <label for="columns"><strong>Columns</strong> (comma-separated):</label>
-    <input id="columns" type="text" placeholder="e.g. First Name, Last Name, Email, Role" />
-    <button id="makeTable" class="primary" type="button">Create / Recreate Table</button>
+  <!-- Setup -->
+  <div class="card stack" role="group" aria-label="Table setup">
+    <div class="row">
+      <label for="columns"><strong>Columns</strong> (comma-separated):</label>
+      <input id="columns" type="text" placeholder="e.g. First Name, Last Name, Email, Notes" />
+      <button id="makeTable" class="primary" type="button">Create / Recreate Table</button>
+    </div>
+    <div class="hint">Recreating the table resets current rows.</div>
   </div>
-  <div class="hint" style="margin-top:6px;">Recreating the table resets current rows.</div>
 
+  <!-- Table -->
   <div class="table-wrapper" id="tableArea" aria-live="polite">
     <table id="dataTable" aria-label="Data entry table">
-      <!-- thead/tbody injected -->
+      <!-- colgroup/thead/tbody injected -->
     </table>
 
-    <div class="controls" style="margin-top:12px;">
-      <button id="addRow" type="button">Add Row</button>
-      <button id="clearRows" class="danger" type="button">Clear All Rows</button>
+    <!-- Column width controls -->
+    <div class="widths-panel">
+      <div class="row" style="justify-content:space-between;align-items:center;">
+        <div><strong style="font-size:14px;">Column widths</strong></div>
+        <div class="hint">Drag sliders to resize columns (80–600 px). Changes save automatically.</div>
+      </div>
+      <div id="widthControls" class="widths-grid"></div>
+    </div>
+
+    <!-- SAFE primary controls -->
+    <div class="controls-top">
+      <button id="addRow" class="primary" type="button">Add Row</button>
 
       <span class="spacer"></span>
 
-      <label><input id="includeHeader" type="checkbox" checked> Include header row</label>
-
-      <label>Delimiter:
-        <select id="delimiter" aria-label="CSV delimiter">
-          <option value=",">Comma</option>
-          <option value=";">Semicolon</option>
-          <option value="\t">Tab</option>
-        </select>
+      <label>File name:
+        <input id="fileName" type="text" value="data.csv" style="min-width:220px;" />
       </label>
 
-      <label>File name:
-        <input id="fileName" type="text" value="data.csv" />
+      <!-- Header hidden by default (unchecked) -->
+      <label title="Include the header row as the first line">
+        <input id="includeHeader" type="checkbox"> Include header row
       </label>
 
       <button id="downloadCsv" class="primary" type="button">Generate CSV</button>
     </div>
 
-    <div class="hint" style="margin-top:6px;">
-      Notes:
+    <!-- DANGER ZONE (isolated & distant) -->
+    <div class="danger-zone">
+      <div class="row">
+        <div>
+          <strong>Danger zone</strong>
+          <div><small>Irreversible actions. Be careful.</small></div>
+        </div>
+        <button id="clearRows" class="danger" type="button">Clear All Rows</button>
+      </div>
+    </div>
+
+    <div class="hint" style="margin-top:10px;">
+      Tips:
       <ul style="margin:6px 0 0 18px; padding:0;">
         <li>Blank rows are skipped automatically.</li>
-        <li>Excel formula injection is mitigated (cells starting with =, +, -, @ are prefixed with an apostrophe).</li>
         <li>Paste from Excel/Sheets: copy cells and paste anywhere in the table to add rows.</li>
+        <li>To delete a specific row, use the <em>Delete</em> button on that row.</li>
       </ul>
     </div>
   </div>
 
   <script>
     // --- DOM refs
-    const columnsInput   = document.getElementById('columns');
-    const makeTableBtn   = document.getElementById('makeTable');
-    const tableArea      = document.getElementById('tableArea');
-    const dataTable      = document.getElementById('dataTable');
-    const addRowBtn      = document.getElementById('addRow');
-    const clearRowsBtn   = document.getElementById('clearRows');
-    const downloadBtn    = document.getElementById('downloadCsv');
-    const fileNameInput  = document.getElementById('fileName');
-    const includeHeaderEl= document.getElementById('includeHeader');
-    const delimiterSel   = document.getElementById('delimiter');
+    const columnsInput    = document.getElementById('columns');
+    const makeTableBtn    = document.getElementById('makeTable');
+    const tableArea       = document.getElementById('tableArea');
+    const dataTable       = document.getElementById('dataTable');
+    const addRowBtn       = document.getElementById('addRow');
+    const clearRowsBtn    = document.getElementById('clearRows');
+    const downloadBtn     = document.getElementById('downloadCsv');
+    const fileNameInput   = document.getElementById('fileName');
+    const includeHeaderEl = document.getElementById('includeHeader');
+    const widthControls   = document.getElementById('widthControls');
 
     // --- state
     let headers = [];
+    let colWidths = []; // px numbers, length = headers.length
 
     // --- utils
     function sanitizeHeaders(raw) {
-      // Simple comma split; trims & removes empties
       return raw.split(',').map(h => h.trim()).filter(Boolean);
     }
 
+    function ensureWidths() {
+      if (!Array.isArray(colWidths) || colWidths.length !== headers.length) {
+        const def = 200;
+        colWidths = headers.map(() => def);
+      }
+    }
+
+    function buildColgroup() {
+      ensureWidths();
+      let colgroup = dataTable.querySelector('colgroup');
+      if (!colgroup) {
+        colgroup = document.createElement('colgroup');
+        dataTable.prepend(colgroup);
+      }
+      colgroup.innerHTML = '';
+      headers.forEach((_, i) => {
+        const col = document.createElement('col');
+        col.style.width = `${colWidths[i]}px`;
+        colgroup.appendChild(col);
+      });
+    }
+
+    function buildWidthsPanel() {
+      ensureWidths();
+      widthControls.innerHTML = '';
+      headers.forEach((h, i) => {
+        const wrap = document.createElement('div');
+        wrap.className = 'width-item';
+        const title = document.createElement('div');
+        title.className = 'width-item-title';
+        title.textContent = h;
+        const range = document.createElement('input');
+        range.type = 'range';
+        range.min = '80'; range.max = '600'; range.step = '10';
+        range.value = colWidths[i];
+        const valueLbl = document.createElement('div');
+        valueLbl.className = 'hint';
+        valueLbl.style.marginTop = '4px';
+        valueLbl.textContent = `${colWidths[i]} px`;
+
+        range.addEventListener('input', () => {
+          colWidths[i] = parseInt(range.value, 10);
+          valueLbl.textContent = `${colWidths[i]} px`;
+          const colgroup = dataTable.querySelector('colgroup');
+          if (colgroup?.children?.[i]) colgroup.children[i].style.width = `${colWidths[i]}px`;
+          saveToStorage();
+        });
+
+        wrap.appendChild(title);
+        wrap.appendChild(range);
+        wrap.appendChild(valueLbl);
+        widthControls.appendChild(wrap);
+      });
+    }
+
     function buildTable() {
+      buildColgroup();
+
       const thead = document.createElement('thead');
       const trh = document.createElement('tr');
       headers.forEach(h => {
@@ -115,8 +335,11 @@
 
       const tbody = document.createElement('tbody');
       dataTable.innerHTML = '';
+      dataTable.appendChild(document.createElement('colgroup')); // placeholder, rebuild right after
       dataTable.appendChild(thead);
       dataTable.appendChild(tbody);
+      buildColgroup(); // after table reset
+      buildWidthsPanel();
     }
 
     function addRow(initialValues = []) {
@@ -127,7 +350,6 @@
       headers.forEach((h, i) => {
         const td = document.createElement('td');
 
-        // Use textarea for note/description-like columns, otherwise input
         const isMultiline = /notes?|description|comment/i.test(h);
         const field = isMultiline ? document.createElement('textarea') : document.createElement('input');
         if (!isMultiline) field.type = 'text';
@@ -136,10 +358,7 @@
         field.setAttribute('aria-label', `${h} row ${rowIndex + 1}`);
         if (initialValues[i] != null) field.value = initialValues[i];
 
-        // Save to storage on change
         field.addEventListener('input', throttle(saveToStorage, 300));
-
-        // If user presses Enter in last cell, add a new row
         field.addEventListener('keydown', (e) => {
           const isLastCell = i === headers.length - 1;
           if (!isMultiline && isLastCell && e.key === 'Enter') {
@@ -157,7 +376,7 @@
       const delBtn = document.createElement('button');
       delBtn.type = 'button';
       delBtn.textContent = 'Delete';
-      delBtn.className = 'danger';
+      delBtn.className = 'danger btn-row-del';
       delBtn.setAttribute('aria-label', `Delete row ${rowIndex + 1}`);
       delBtn.onclick = () => { tr.remove(); saveToStorage(); };
       tdActions.appendChild(delBtn);
@@ -184,7 +403,6 @@
       return rows;
     }
 
-    // Basic validators keyed by exact header text (case-insensitive)
     function buildValidators() {
       const map = {};
       headers.forEach(h => {
@@ -199,7 +417,6 @@
       let ok = true;
       const tbody = dataTable.querySelector('tbody');
 
-      // clear previous errors
       tbody.querySelectorAll('input,textarea').forEach(el => el.classList.remove('error'));
 
       [...tbody.rows].forEach(tr => {
@@ -247,13 +464,13 @@
       }
 
       const rows = tableToArray();
-      const delim = delimiterSel.value || ',';
       const lines = [];
 
+      // Header hidden by default; user may toggle it on
       if (includeHeaderEl.checked) {
-        lines.push(headers.map(csvEscape).join(delim));
+        lines.push(headers.map(csvEscape).join(',')); // comma is the only delimiter
       }
-      rows.forEach(r => lines.push(r.map(v => csvEscape(v)).join(delim)));
+      rows.forEach(r => lines.push(r.map(v => csvEscape(v)).join(',')));
 
       const csvText = '\uFEFF' + lines.join('\r\n'); // BOM + CRLF for Excel
       const blob = new Blob([csvText], { type: 'text/csv;charset=utf-8;' });
@@ -269,7 +486,7 @@
     }
 
     // Persist & restore (localStorage)
-    const LS_KEY = 'csv_builder_state_v1';
+    const LS_KEY = 'csv_builder_state_v2_dark_widths';
     function saveToStorage() {
       try {
         const state = {
@@ -277,7 +494,7 @@
           rows: tableToArray(),
           fileName: fileNameInput.value,
           includeHeader: includeHeaderEl.checked,
-          delimiter: delimiterSel.value,
+          colWidths
         };
         localStorage.setItem(LS_KEY, JSON.stringify(state));
       } catch { /* ignore */ }
@@ -291,13 +508,13 @@
         if (!Array.isArray(state.headers) || state.headers.length === 0) return false;
 
         headers = state.headers;
+        colWidths = Array.isArray(state.colWidths) ? state.colWidths : headers.map(() => 200);
         buildTable();
         (state.rows || []).forEach(vals => addRow(vals));
         if ((state.rows || []).length === 0) addRow();
 
         fileNameInput.value = state.fileName || 'data.csv';
         includeHeaderEl.checked = !!state.includeHeader;
-        if (state.delimiter) delimiterSel.value = state.delimiter;
 
         columnsInput.value = headers.join(', ');
         tableArea.style.display = 'block';
@@ -329,6 +546,7 @@
       if (hasRows && !confirm('Recreating the table will clear existing rows. Continue?')) return;
 
       headers = newHeaders;
+      colWidths = headers.map(() => 200); // reset widths for new columns
       buildTable();
       addRow(); // start with one empty row
       tableArea.style.display = 'block';
@@ -338,16 +556,15 @@
     addRowBtn.addEventListener('click', () => { addRow(); saveToStorage(); });
 
     clearRowsBtn.addEventListener('click', () => {
-      if (!dataTable.querySelector('tbody')?.rows.length) return;
-      if (!confirm('Clear all rows?')) return;
-      dataTable.querySelector('tbody').innerHTML = '';
+      const tbody = dataTable.querySelector('tbody');
+      if (!tbody?.rows.length) return;
+      if (!confirm('This will remove ALL rows. This cannot be undone. Continue?')) return;
+      tbody.innerHTML = '';
       saveToStorage();
     });
 
     downloadBtn.addEventListener('click', downloadCSV);
-
     includeHeaderEl.addEventListener('change', saveToStorage);
-    delimiterSel.addEventListener('change', saveToStorage);
     fileNameInput.addEventListener('input', throttle(saveToStorage, 300));
     columnsInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') { e.preventDefault(); makeTableBtn.click(); }
@@ -360,13 +577,11 @@
       const tbody = dataTable.querySelector('tbody');
       if (!tbody) return;
 
-      // Detect if it's likely Excel/Sheets (TSV) or CSV
       const hasTabs = /\t/.test(t);
       const lines = t.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n').filter(l => l.length);
       if (!lines.length) return;
 
       e.preventDefault();
-
       lines.forEach(line => {
         const parts = hasTabs ? line.split('\t') : line.split(',');
         addRow(parts.slice(0, headers.length));
@@ -374,7 +589,7 @@
       saveToStorage();
     });
 
-    // Initial restore (if present); otherwise keep UI hidden until user creates a table
+    // Initial restore; otherwise wait for user to create a table
     restoreFromStorage();
   </script>
 </body>
