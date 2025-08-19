@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>CSV Builder (Dark, Excel-style column resize)</title>
+  <title>CSV Builder (Dark)</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
     :root {
@@ -18,12 +18,9 @@
       --border: #233055;
       --focus: #22d3ee;
       --input-bg: #0f1a37;
-      --min-col: 80px;
-      --max-col: 800px;
     }
 
     * { box-sizing: border-box; }
-    html, body { height: 100%; }
     body {
       margin: 24px;
       font-family: system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
@@ -31,7 +28,7 @@
       background: radial-gradient(1200px 800px at 10% -10%, #121a34 0%, var(--bg) 60%) fixed;
     }
 
-    h1 { margin: 0 0 12px; font-size: 22px; font-weight: 700; letter-spacing: .2px; }
+    h1 { margin: 0 0 12px; font-size: 22px; font-weight: 700; }
 
     .card {
       background: linear-gradient(180deg, var(--bg-elev), var(--bg-elev-2));
@@ -44,8 +41,6 @@
     .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
     .stack { display: grid; gap: 10px; }
 
-    label { color: var(--muted); font-size: 13px; }
-
     input[type="text"] {
       background: var(--input-bg);
       color: var(--text);
@@ -55,8 +50,6 @@
       min-width: 320px;
       outline: none;
     }
-    input[type="text"]::placeholder { color: #6b7280; }
-    input[type="text"]:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 
     button {
       padding: 10px 14px;
@@ -65,18 +58,11 @@
       border-radius: 12px;
       background: var(--bg-elev);
       color: var(--text);
-      transition: transform .02s ease-in-out, background .2s, border-color .2s;
+      transition: background .2s;
     }
-    button:active { transform: translateY(1px); }
-    button.primary {
-      background: var(--primary);
-      border-color: var(--primary-600);
-    }
+    button.primary { background: var(--primary); border-color: var(--primary-600); }
     button.primary:hover { background: var(--primary-600); }
-    button.danger {
-      background: var(--danger);
-      border-color: var(--danger-600);
-    }
+    button.danger { background: var(--danger); border-color: var(--danger-600); }
     button.danger:hover { background: var(--danger-600); }
 
     .hint { color: var(--muted); font-size: 12px; }
@@ -87,11 +73,9 @@
       border-collapse: collapse;
       width: 100%;
       min-width: 720px;
-      table-layout: fixed; /* col widths come from colgroup */
       border: 1px solid var(--border);
       border-radius: 12px;
-      overflow: clip;
-      position: relative;
+      overflow: hidden;
     }
 
     th, td {
@@ -106,21 +90,7 @@
       position: sticky;
       top: 0;
       z-index: 1;
-      user-select: none;
-      position: relative;
     }
-
-    /* Resizer handle like Excel (drag between columns) */
-    .col-resizer {
-      position: absolute;
-      top: 0;
-      right: -4px; /* overlap a bit for easier hit target */
-      width: 8px;
-      height: 100%;
-      cursor: col-resize;
-      z-index: 2;
-    }
-    .col-resizer:hover { background: rgba(255,255,255,.05); }
 
     td input, td textarea {
       width: 100%;
@@ -132,14 +102,13 @@
       color: var(--text);
     }
     td textarea { min-height: 72px; resize: vertical; }
-    .error { outline: 2px solid var(--danger); outline-offset: 1px; }
 
-    .controls-top { /* SAFE area: primary actions only */
+    .controls-top {
       display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 12px;
     }
     .controls-top .spacer { flex: 1 1 auto; }
 
-    .danger-zone { /* place destructive control far away */
+    .danger-zone {
       margin-top: 18px;
       padding: 12px;
       border-radius: 12px;
@@ -147,13 +116,6 @@
       background: rgba(239, 68, 68, .06);
     }
 
-    .danger-zone .row { justify-content: space-between; }
-    .danger-zone small { color: var(--muted); }
-
-    /* Focus styles */
-    :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
-
-    /* Badge */
     .badge {
       font-size: 11px;
       padding: 4px 8px;
@@ -163,30 +125,14 @@
       border-radius: 999px;
     }
 
-    /* Delete row button inside table */
     .btn-row-del { padding: 6px 10px; border-radius: 8px; font-size: 12px; }
-
-    /* Hidden measurement element for auto-fit */
-    #measure-box {
-      position: absolute;
-      visibility: hidden;
-      white-space: pre-wrap;
-      padding: 8px 10px;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      background: var(--input-bg);
-      color: var(--text);
-      font: inherit;
-      max-width: var(--max-col);
-      word-break: break-word;
-    }
   </style>
 </head>
 <body>
   <h1>CSV Builder <span class="badge">Dark</span></h1>
 
   <!-- Setup -->
-  <div class="card stack" role="group" aria-label="Table setup">
+  <div class="card stack">
     <div class="row">
       <label for="columns"><strong>Columns</strong> (comma-separated):</label>
       <input id="columns" type="text" placeholder="e.g. First Name, Last Name, Email, Notes" />
@@ -196,475 +142,148 @@
   </div>
 
   <!-- Table -->
-  <div class="table-wrapper" id="tableArea" aria-live="polite">
-    <table id="dataTable" aria-label="Data entry table">
-      <!-- colgroup/thead/tbody injected -->
-    </table>
+  <div class="table-wrapper" id="tableArea">
+    <table id="dataTable"></table>
 
-    <!-- SAFE primary controls -->
     <div class="controls-top">
       <button id="addRow" class="primary" type="button">Add Row</button>
-
       <span class="spacer"></span>
-
       <label>File name:
         <input id="fileName" type="text" value="data.csv" style="min-width:220px;" />
       </label>
-
-      <!-- Header hidden by default (unchecked) -->
-      <label title="Include the header row as the first line">
+      <label>
         <input id="includeHeader" type="checkbox"> Include header row
       </label>
-
       <button id="downloadCsv" class="primary" type="button">Generate CSV</button>
     </div>
 
-    <!-- DANGER ZONE (isolated & distant) -->
     <div class="danger-zone">
-      <div class="row">
-        <div>
-          <strong>Danger zone</strong>
-          <div><small>Irreversible actions. Be careful.</small></div>
-        </div>
+      <div class="row" style="justify-content:space-between;">
+        <div><strong>Danger zone</strong></div>
         <button id="clearRows" class="danger" type="button">Clear All Rows</button>
       </div>
     </div>
-
-    <div class="hint" style="margin-top:10px;">
-      Tips:
-      <ul style="margin:6px 0 0 18px; padding:0;">
-        <li>Resize columns by dragging the handle between headers (cursor changes). Double-click the handle to auto-fit to the widest cell.</li>
-        <li>Blank rows are skipped automatically.</li>
-        <li>Paste from Excel/Sheets: copy cells and paste anywhere in the table to add rows.</li>
-        <li>To delete a specific row, use the <em>Delete</em> button on that row.</li>
-      </ul>
-    </div>
   </div>
 
-  <!-- Hidden measurer for auto-fit -->
-  <div id="measure-box"></div>
-
   <script>
-    // --- DOM refs
-    const columnsInput    = document.getElementById('columns');
-    const makeTableBtn    = document.getElementById('makeTable');
-    const tableArea       = document.getElementById('tableArea');
-    const dataTable       = document.getElementById('dataTable');
-    const addRowBtn       = document.getElementById('addRow');
-    const clearRowsBtn    = document.getElementById('clearRows');
-    const downloadBtn     = document.getElementById('downloadCsv');
-    const fileNameInput   = document.getElementById('fileName');
+    const columnsInput = document.getElementById('columns');
+    const makeTableBtn = document.getElementById('makeTable');
+    const tableArea    = document.getElementById('tableArea');
+    const dataTable    = document.getElementById('dataTable');
+    const addRowBtn    = document.getElementById('addRow');
+    const clearRowsBtn = document.getElementById('clearRows');
+    const downloadBtn  = document.getElementById('downloadCsv');
+    const fileNameInput= document.getElementById('fileName');
     const includeHeaderEl = document.getElementById('includeHeader');
-    const measureBox      = document.getElementById('measure-box');
 
-    // --- state
     let headers = [];
-    let colWidths = []; // px numbers, length = headers.length
 
-    // --- utils
     function sanitizeHeaders(raw) {
       return raw.split(',').map(h => h.trim()).filter(Boolean);
     }
 
-    function ensureWidths() {
-      if (!Array.isArray(colWidths) || colWidths.length !== headers.length) {
-        const def = 200;
-        colWidths = headers.map(() => def);
-      }
-    }
-
-    function clampWidth(px) {
-      const min = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--min-col')) || 80;
-      const max = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--max-col')) || 800;
-      return Math.min(Math.max(px, min), max);
-    }
-
-    function buildColgroup() {
-      ensureWidths();
-      let colgroup = dataTable.querySelector('colgroup');
-      if (!colgroup) {
-        colgroup = document.createElement('colgroup');
-        dataTable.prepend(colgroup);
-      }
-      colgroup.innerHTML = '';
-      headers.forEach((_, i) => {
-        const col = document.createElement('col');
-        col.style.width = `${clampWidth(colWidths[i])}px`;
-        colgroup.appendChild(col);
-      });
-    }
-
     function buildTable() {
-      buildColgroup();
-
       const thead = document.createElement('thead');
       const trh = document.createElement('tr');
-      headers.forEach((h, idx) => {
+      headers.forEach(h => {
         const th = document.createElement('th');
         th.textContent = h;
-        th.setAttribute('scope','col');
-
-        // Add resizer handle to each header (Excel-style)
-        const resizer = document.createElement('div');
-        resizer.className = 'col-resizer';
-        resizer.title = 'Drag to resize. Double-click to auto-fit.';
-        resizer.addEventListener('mousedown', e => startResize(e, idx));
-        resizer.addEventListener('dblclick', e => { e.stopPropagation(); autoFitColumn(idx); });
-        th.appendChild(resizer);
-
         trh.appendChild(th);
       });
       const thDel = document.createElement('th');
       thDel.textContent = 'Actions';
-      thDel.setAttribute('scope','col');
-      // Resizer for actions column too (optional)
-      const resizerLast = document.createElement('div');
-      resizerLast.className = 'col-resizer';
-      resizerLast.title = 'Drag to resize. Double-click to auto-fit.';
-      resizerLast.addEventListener('mousedown', e => startResize(e, headers.length)); // actions index
-      resizerLast.addEventListener('dblclick', e => { e.stopPropagation(); autoFitColumn(headers.length); });
-      thDel.appendChild(resizerLast);
-
       trh.appendChild(thDel);
       thead.appendChild(trh);
 
       const tbody = document.createElement('tbody');
       dataTable.innerHTML = '';
-      dataTable.appendChild(document.createElement('colgroup')); // placeholder, rebuild right after
       dataTable.appendChild(thead);
       dataTable.appendChild(tbody);
-      buildColgroup(); // after table reset
     }
 
     function addRow(initialValues = []) {
       const tbody = dataTable.querySelector('tbody');
       const tr = document.createElement('tr');
-      const rowIndex = tbody.rows.length;
-
       headers.forEach((h, i) => {
         const td = document.createElement('td');
-
-        const isMultiline = /notes?|description|comment/i.test(h);
-        const field = isMultiline ? document.createElement('textarea') : document.createElement('input');
-        if (!isMultiline) field.type = 'text';
-
-        field.placeholder = h;
-        field.setAttribute('aria-label', `${h} row ${rowIndex + 1}`);
-        if (initialValues[i] != null) field.value = initialValues[i];
-
-        field.addEventListener('input', throttle(saveToStorage, 300));
-        field.addEventListener('keydown', (e) => {
-          const isLastCell = i === headers.length - 1;
-          if (!isMultiline && isLastCell && e.key === 'Enter') {
-            e.preventDefault();
-            addRow();
-            focusCell(tbody.rows.length - 1, 0);
-          }
-        });
-
-        td.appendChild(field);
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.placeholder = h;
+        if (initialValues[i] != null) input.value = initialValues[i];
+        td.appendChild(input);
         tr.appendChild(td);
       });
-
       const tdActions = document.createElement('td');
       const delBtn = document.createElement('button');
       delBtn.type = 'button';
       delBtn.textContent = 'Delete';
       delBtn.className = 'danger btn-row-del';
-      delBtn.setAttribute('aria-label', `Delete row ${rowIndex + 1}`);
-      delBtn.onclick = () => { tr.remove(); saveToStorage(); };
+      delBtn.onclick = () => tr.remove();
       tdActions.appendChild(delBtn);
       tr.appendChild(tdActions);
-
       tbody.appendChild(tr);
-    }
-
-    function focusCell(r, c) {
-      const tbody = dataTable.querySelector('tbody');
-      const cell = tbody?.rows?.[r]?.cells?.[c]?.querySelector('input,textarea');
-      if (cell) cell.focus();
     }
 
     function tableToArray() {
       const rows = [];
       const tbody = dataTable.querySelector('tbody');
       [...tbody.rows].forEach(tr => {
-        const values = [...tr.cells].slice(0, headers.length).map(td => (td.querySelector('input,textarea')?.value) ?? '');
-        const allBlank = values.every(v => String(v).trim() === '');
-        if (allBlank) return; // skip blank row
+        const values = [...tr.cells].slice(0, headers.length).map(td => td.querySelector('input').value);
+        const allBlank = values.every(v => (v ?? '').trim() === '');
+        if (allBlank) return;
         rows.push(values);
       });
       return rows;
     }
 
-    function buildValidators() {
-      const map = {};
-      headers.forEach(h => {
-        if (/email/i.test(h)) map[h] = v => /\S+@\S+\.\S+/.test(String(v).trim());
-        if (/phone|mobile|contact/i.test(h)) map[h] = map[h] || (v => /^[\d\s().+\-]{7,}$/.test(String(v).trim()));
-      });
-      return map;
-    }
-
-    function validateRows() {
-      const validators = buildValidators();
-      let ok = true;
-      const tbody = dataTable.querySelector('tbody');
-
-      tbody.querySelectorAll('input,textarea').forEach(el => el.classList.remove('error'));
-
-      [...tbody.rows].forEach(tr => {
-        headers.forEach((h, i) => {
-          const el = tr.cells[i].querySelector('input,textarea');
-          const v = (el.value || '').trim();
-          const check = validators[h];
-          if (check && !check(v)) {
-            el.classList.add('error');
-            ok = false;
-          }
-        });
-      });
-
-      return ok;
-    }
-
-    function mitigateExcelFormulaInjection(s) {
-      return /^[=\-+@]/.test(s) ? "'" + s : s;
-    }
-
     function csvEscape(value) {
       const raw = String(value ?? '');
-      const safe = mitigateExcelFormulaInjection(raw);
+      const safe = /^[=\-+@]/.test(raw) ? "'" + raw : raw;
       const needsQuotes = /[",\n\r]/.test(safe);
       const v = safe.replace(/"/g, '""');
       return needsQuotes ? `"${v}"` : v;
     }
 
-    function normalizeFilename(name) {
-      let n = (name || 'data.csv').trim().replace(/[^A-Za-z0-9._-]/g, '_');
-      if (!/\.csv$/i.test(n)) n += '.csv';
-      return n;
-    }
-
     function downloadCSV() {
       if (headers.length === 0) {
-        alert('Please create the table by entering column names first.');
+        alert('Please create the table first.');
         return;
       }
-
-      if (!validateRows()) {
-        alert('Please fix highlighted fields (e.g., invalid email/phone) before exporting.');
-        return;
-      }
-
       const rows = tableToArray();
       const lines = [];
-
-      // Header hidden by default; user may toggle it on
-      if (includeHeaderEl.checked) {
-        lines.push(headers.map(csvEscape).join(',')); // comma only
-      }
+      if (includeHeaderEl.checked) lines.push(headers.map(csvEscape).join(','));
       rows.forEach(r => lines.push(r.map(v => csvEscape(v)).join(',')));
-
-      const csvText = '\uFEFF' + lines.join('\r\n'); // BOM + CRLF for Excel
+      const csvText = '\uFEFF' + lines.join('\r\n');
       const blob = new Blob([csvText], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
-
       const a = document.createElement('a');
       a.href = url;
-      a.download = normalizeFilename(fileNameInput.value);
+      let name = (fileNameInput.value || 'data.csv').trim();
+      if (!name.toLowerCase().endsWith('.csv')) name += '.csv';
+      a.download = name;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     }
 
-    // ---- Excel-style column resizing ----
-    let isResizing = false;
-    let startX = 0;
-    let startWidth = 0;
-    let resizingColIndex = -1;
-
-    function startResize(e, colIndex) {
-      e.preventDefault();
-      isResizing = true;
-      startX = e.clientX;
-      resizingColIndex = colIndex;
-
-      const cg = dataTable.querySelector('colgroup');
-      const colEl = cg?.children?.[colIndex];
-      const curr = colEl ? parseInt(colEl.style.width) : colWidths[colIndex] || 200;
-      startWidth = curr;
-
-      document.addEventListener('mousemove', onResizeMove);
-      document.addEventListener('mouseup', stopResize);
-      document.body.style.cursor = 'col-resize';
-    }
-
-    function onResizeMove(e) {
-      if (!isResizing) return;
-      const delta = e.clientX - startX;
-      const newW = clampWidth(startWidth + delta);
-      setColumnWidth(resizingColIndex, newW);
-    }
-
-    function stopResize() {
-      if (!isResizing) return;
-      isResizing = false;
-      document.removeEventListener('mousemove', onResizeMove);
-      document.removeEventListener('mouseup', stopResize);
-      document.body.style.cursor = '';
-      saveToStorage();
-    }
-
-    function setColumnWidth(index, px) {
-      const cg = dataTable.querySelector('colgroup');
-      const colEl = cg?.children?.[index];
-      const w = clampWidth(px);
-      if (colEl) colEl.style.width = `${w}px`;
-      colWidths[index] = w;
-    }
-
-    // Auto-fit on double-click of the resizer: find widest content in column
-    function autoFitColumn(index) {
-      const minPx = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--min-col')) || 80;
-      const maxPx = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--max-col')) || 800;
-      const padding = 24; // extra breathing room
-
-      // Measure header text
-      let max = measureText(headers[index]) + padding;
-
-      // Measure each cell's displayed text/value
-      const tbody = dataTable.querySelector('tbody');
-      [...tbody.rows].forEach(tr => {
-        const editor = tr.cells[index]?.querySelector('input,textarea');
-        if (!editor) return;
-        const val = (editor.value || editor.placeholder || '').toString();
-        const cellWidth = measureText(val, editor.tagName.toLowerCase() === 'textarea');
-        if (cellWidth + padding > max) max = cellWidth + padding;
-      });
-
-      setColumnWidth(index, Math.min(Math.max(max, minPx), maxPx));
-      saveToStorage();
-    }
-
-    // Use a hidden box with same font/padding as inputs to measure string width/height
-    function measureText(text, multiline = false) {
-      if (!measureBox) return 200;
-      measureBox.style.whiteSpace = multiline ? 'pre-wrap' : 'pre';
-      // Replace spaces so they are measured visually
-      const content = String(text).replace(/ /g, '\u00A0');
-      measureBox.textContent = content.length ? content : ' ';
-      // Width we care about
-      return measureBox.offsetWidth;
-    }
-
-    // Persist & restore (localStorage)
-    const LS_KEY = 'csv_builder_state_v3_dark_excelresize';
-    function saveToStorage() {
-      try {
-        const state = {
-          headers,
-          rows: tableToArray(),
-          fileName: fileNameInput.value,
-          includeHeader: includeHeaderEl.checked,
-          colWidths
-        };
-        localStorage.setItem(LS_KEY, JSON.stringify(state));
-      } catch { /* ignore */ }
-    }
-
-    function restoreFromStorage() {
-      try {
-        const raw = localStorage.getItem(LS_KEY);
-        if (!raw) return false;
-        const state = JSON.parse(raw);
-        if (!Array.isArray(state.headers) || state.headers.length === 0) return false;
-
-        headers = state.headers;
-        colWidths = Array.isArray(state.colWidths) ? state.colWidths : headers.map(() => 200);
-        buildTable();
-        (state.rows || []).forEach(vals => addRow(vals));
-        if ((state.rows || []).length === 0) addRow();
-
-        fileNameInput.value = state.fileName || 'data.csv';
-        includeHeaderEl.checked = !!state.includeHeader;
-
-        columnsInput.value = headers.join(', ');
-        tableArea.style.display = 'block';
-        return true;
-      } catch {
-        return false;
-      }
-    }
-
-    function throttle(fn, wait = 200) {
-      let t = 0, lastArgs;
-      return (...args) => {
-        const now = Date.now();
-        lastArgs = args;
-        if (now - t >= wait) {
-          t = now; fn(...lastArgs);
-        }
-      };
-    }
-
-    // --- Events
     makeTableBtn.addEventListener('click', () => {
       const newHeaders = sanitizeHeaders(columnsInput.value);
-      if (newHeaders.length === 0) {
-        alert('Please enter at least one column name.');
-        return;
-      }
-      const hasRows = dataTable.querySelector('tbody')?.rows.length;
-      if (hasRows && !confirm('Recreating the table will clear existing rows. Continue?')) return;
-
+      if (newHeaders.length === 0) return alert('Please enter at least one column.');
       headers = newHeaders;
-      colWidths = headers.map(() => 200); // reset widths for new columns + actions col handled separately on first render
       buildTable();
-      addRow(); // start with one empty row
+      addRow();
       tableArea.style.display = 'block';
-      saveToStorage();
     });
 
-    addRowBtn.addEventListener('click', () => { addRow(); saveToStorage(); });
-
+    addRowBtn.addEventListener('click', () => addRow());
     clearRowsBtn.addEventListener('click', () => {
       const tbody = dataTable.querySelector('tbody');
-      if (!tbody?.rows.length) return;
-      if (!confirm('This will remove ALL rows. This cannot be undone. Continue?')) return;
-      tbody.innerHTML = '';
-      saveToStorage();
-    });
-
-    downloadBtn.addEventListener('click', downloadCSV);
-    includeHeaderEl.addEventListener('change', saveToStorage);
-    fileNameInput.addEventListener('input', throttle(saveToStorage, 300));
-    columnsInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') { e.preventDefault(); makeTableBtn.click(); }
-    });
-
-    // Paste handler: paste TSV/CSV/lines to add rows
-    dataTable.addEventListener('paste', (e) => {
-      const t = (e.clipboardData || window.clipboardData)?.getData('text');
-      if (!t || headers.length === 0) return;
-      const tbody = dataTable.querySelector('tbody');
       if (!tbody) return;
-
-      const hasTabs = /\t/.test(t);
-      const lines = t.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n').filter(l => l.length);
-      if (!lines.length) return;
-
-      e.preventDefault();
-      lines.forEach(line => {
-        const parts = hasTabs ? line.split('\t') : line.split(',');
-        addRow(parts.slice(0, headers.length));
-      });
-      saveToStorage();
+      if (!confirm('Clear all rows?')) return;
+      tbody.innerHTML = '';
     });
-
-    // Initial restore; otherwise wait for user to create a table
-    restoreFromStorage();
+    downloadBtn.addEventListener('click', downloadCSV);
   </script>
 </body>
 </html>
