@@ -1,249 +1,381 @@
 <!doctype html>
 <html lang="en">
 <head>
-    <meta charset="utf-8" />
-    <title>CSV Builder</title>
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <style>
-        :root {
-            font-family: system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
-        }
-
-        body {
-            margin: 24px;
-        }
-
-        h1 {
-            margin: 0 0 12px;
-            font-size: 20px;
-        }
-
-        .row {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-
-        input[type="text"] {
-            padding: 8px;
-            min-width: 320px;
-        }
-
-        button {
-            padding: 8px 12px;
-            cursor: pointer;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            background: #fafafa;
-        }
-
-            button.primary {
-                background: #0a66c2;
-                color: white;
-                border-color: #0a66c2;
-            }
-
-            button.danger {
-                background: #e11d48;
-                color: white;
-                border-color: #e11d48;
-            }
-
-            button:disabled {
-                opacity: .6;
-                cursor: not-allowed;
-            }
-
-        table {
-            border-collapse: collapse;
-            width: 100%;
-            margin-top: 12px;
-        }
-
-        th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
-        }
-
-        th {
-            background: #f3f4f6;
-            text-align: left;
-        }
-
-        td input {
-            width: 100%;
-            box-sizing: border-box;
-            padding: 6px;
-            border: 1px solid #e5e7eb;
-            border-radius: 6px;
-        }
-
-        .controls {
-            display: flex;
-            gap: 8px;
-            margin-top: 12px;
-            flex-wrap: wrap;
-        }
-
-        .hint {
-            color: #6b7280;
-            font-size: 12px;
-        }
-    </style>
+  <meta charset="utf-8" />
+  <title>CSV Builder</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    :root { font-family: system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
+    body { margin: 24px; }
+    h1 { margin: 0 0 12px; font-size: 20px; }
+    .row, .controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    input[type="text"], textarea { padding: 8px; min-width: 320px; }
+    button { padding: 8px 12px; cursor: pointer; border: 1px solid #ccc; border-radius: 8px; background: #fafafa; }
+    button.primary { background: #0a66c2; color: #fff; border-color: #0a66c2; }
+    button.danger { background: #e11d48; color: #fff; border-color: #e11d48; }
+    button:disabled { opacity: .6; cursor: not-allowed; }
+    .hint { color: #6b7280; font-size: 12px; }
+    .table-wrapper { overflow-x: auto; margin-top: 16px; display:none; }
+    table { border-collapse: collapse; width: 100%; min-width: 640px; }
+    th, td { border: 1px solid #ddd; padding: 8px; vertical-align: top; }
+    th { background: #f3f4f6; text-align: left; }
+    td input, td textarea { width: 100%; box-sizing: border-box; padding: 6px; border: 1px solid #e5e7eb; border-radius: 6px; }
+    td textarea { min-height: 72px; resize: vertical; }
+    .error { outline: 2px solid #e11d48; }
+    :focus-visible { outline: 3px solid #7dd3fc; outline-offset: 2px; }
+    .spacer { flex: 1 1 auto; }
+    .controls label { display: inline-flex; align-items: center; gap: 6px; }
+    .controls input[type="text"] { min-width: 160px; }
+  </style>
 </head>
 <body>
-    <h1>CSV Builder</h1>
+  <h1>CSV Builder</h1>
 
-    <div class="row">
-        <label for="columns"><strong>Columns</strong> (comma-separated):</label>
-        <input id="columns" type="text" placeholder="e.g. First Name, Last Name, Email, Role" />
-        <button id="makeTable" class="primary">Create Table</button>
+  <div class="row" role="group" aria-label="Table setup">
+    <label for="columns"><strong>Columns</strong> (comma-separated):</label>
+    <input id="columns" type="text" placeholder="e.g. First Name, Last Name, Email, Role" />
+    <button id="makeTable" class="primary" type="button">Create / Recreate Table</button>
+  </div>
+  <div class="hint" style="margin-top:6px;">Recreating the table resets current rows.</div>
+
+  <div class="table-wrapper" id="tableArea" aria-live="polite">
+    <table id="dataTable" aria-label="Data entry table">
+      <!-- thead/tbody injected -->
+    </table>
+
+    <div class="controls" style="margin-top:12px;">
+      <button id="addRow" type="button">Add Row</button>
+      <button id="clearRows" class="danger" type="button">Clear All Rows</button>
+
+      <span class="spacer"></span>
+
+      <label><input id="includeHeader" type="checkbox" checked> Include header row</label>
+
+      <label>Delimiter:
+        <select id="delimiter" aria-label="CSV delimiter">
+          <option value=",">Comma</option>
+          <option value=";">Semicolon</option>
+          <option value="\t">Tab</option>
+        </select>
+      </label>
+
+      <label>File name:
+        <input id="fileName" type="text" value="data.csv" />
+      </label>
+
+      <button id="downloadCsv" class="primary" type="button">Generate CSV</button>
     </div>
-    <div class="hint" style="margin-top:6px;">You can recreate the table any time—this resets current rows.</div>
 
-    <div id="tableArea" style="margin-top:16px; display:none;">
-        <table id="dataTable" aria-label="Data Entry Table"></table>
-
-        <div class="controls">
-            <button id="addRow">Add Row</button>
-            <button id="clearRows" class="danger">Clear All Rows</button>
-            <button id="downloadCsv" class="primary">Generate CSV</button>
-            <label>
-                File name:
-                <input id="fileName" type="text" value="data.csv" style="min-width:160px;" />
-            </label>
-        </div>
-        <div class="hint">Note: CSV is generated <em>without</em> a header row, and blank rows are skipped automatically.</div>
+    <div class="hint" style="margin-top:6px;">
+      Notes:
+      <ul style="margin:6px 0 0 18px; padding:0;">
+        <li>Blank rows are skipped automatically.</li>
+        <li>Excel formula injection is mitigated (cells starting with =, +, -, @ are prefixed with an apostrophe).</li>
+        <li>Paste from Excel/Sheets: copy cells and paste anywhere in the table to add rows.</li>
+      </ul>
     </div>
+  </div>
 
-    <script>
-        const columnsInput = document.getElementById('columns');
-        const makeTableBtn = document.getElementById('makeTable');
-        const tableArea = document.getElementById('tableArea');
-        const dataTable = document.getElementById('dataTable');
-        const addRowBtn = document.getElementById('addRow');
-        const clearRowsBtn = document.getElementById('clearRows');
-        const downloadBtn = document.getElementById('downloadCsv');
-        const fileNameInput = document.getElementById('fileName');
+  <script>
+    // --- DOM refs
+    const columnsInput   = document.getElementById('columns');
+    const makeTableBtn   = document.getElementById('makeTable');
+    const tableArea      = document.getElementById('tableArea');
+    const dataTable      = document.getElementById('dataTable');
+    const addRowBtn      = document.getElementById('addRow');
+    const clearRowsBtn   = document.getElementById('clearRows');
+    const downloadBtn    = document.getElementById('downloadCsv');
+    const fileNameInput  = document.getElementById('fileName');
+    const includeHeaderEl= document.getElementById('includeHeader');
+    const delimiterSel   = document.getElementById('delimiter');
 
-        let headers = [];
-        const includeHeader = false; // per your request, do not include header row
+    // --- state
+    let headers = [];
 
-        function sanitizeHeaders(raw) {
-            return raw
-                .split(',')
-                .map(h => h.trim())
-                .filter(h => h.length > 0);
-        }
+    // --- utils
+    function sanitizeHeaders(raw) {
+      // Simple comma split; trims & removes empties
+      return raw.split(',').map(h => h.trim()).filter(Boolean);
+    }
 
-        function buildTable() {
-            const thead = document.createElement('thead');
-            const trh = document.createElement('tr');
-            headers.forEach(h => {
-                const th = document.createElement('th');
-                th.textContent = h;
-                trh.appendChild(th);
-            });
-            const thDel = document.createElement('th');
-            thDel.textContent = 'Actions';
-            trh.appendChild(thDel);
-            thead.appendChild(trh);
+    function buildTable() {
+      const thead = document.createElement('thead');
+      const trh = document.createElement('tr');
+      headers.forEach(h => {
+        const th = document.createElement('th');
+        th.textContent = h;
+        th.setAttribute('scope','col');
+        trh.appendChild(th);
+      });
+      const thDel = document.createElement('th');
+      thDel.textContent = 'Actions';
+      thDel.setAttribute('scope','col');
+      trh.appendChild(thDel);
+      thead.appendChild(trh);
 
-            const tbody = document.createElement('tbody');
-            dataTable.innerHTML = '';
-            dataTable.appendChild(thead);
-            dataTable.appendChild(tbody);
-        }
+      const tbody = document.createElement('tbody');
+      dataTable.innerHTML = '';
+      dataTable.appendChild(thead);
+      dataTable.appendChild(tbody);
+    }
 
-        function addRow(initialValues = []) {
-            const tbody = dataTable.querySelector('tbody');
-            const tr = document.createElement('tr');
-            headers.forEach((h, i) => {
-                const td = document.createElement('td');
-                const input = document.createElement('input');
-                input.type = 'text';
-                input.placeholder = h;
-                if (initialValues[i] != null) input.value = initialValues[i];
-                td.appendChild(input);
-                tr.appendChild(td);
-            });
-            const tdActions = document.createElement('td');
-            const delBtn = document.createElement('button');
-            delBtn.textContent = 'Delete';
-            delBtn.className = 'danger';
-            delBtn.onclick = () => tr.remove();
-            tdActions.appendChild(delBtn);
-            tr.appendChild(tdActions);
-            tbody.appendChild(tr);
-        }
+    function addRow(initialValues = []) {
+      const tbody = dataTable.querySelector('tbody');
+      const tr = document.createElement('tr');
+      const rowIndex = tbody.rows.length;
 
-        function tableToArray() {
-            const rows = [];
-            const tbody = dataTable.querySelector('tbody');
-            [...tbody.rows].forEach(tr => {
-                const values = [...tr.cells].slice(0, headers.length).map(td => td.querySelector('input').value);
-                // Always skip completely blank rows
-                const allBlank = values.every(v => (v ?? '').trim() === '');
-                if (allBlank) return;
-                rows.push(values);
-            });
-            return rows;
-        }
+      headers.forEach((h, i) => {
+        const td = document.createElement('td');
 
-        function csvEscape(value) {
-            const needsQuotes = /[",\n\r]/.test(value);
-            let v = (value ?? '').replace(/"/g, '""');
-            return needsQuotes ? `"${v}"` : v;
-        }
+        // Use textarea for note/description-like columns, otherwise input
+        const isMultiline = /notes?|description|comment/i.test(h);
+        const field = isMultiline ? document.createElement('textarea') : document.createElement('input');
+        if (!isMultiline) field.type = 'text';
 
-        function downloadCSV() {
-            if (headers.length === 0) {
-                alert('Please create the table by entering column names first.');
-                return;
-            }
-            const rows = tableToArray();
-            const lines = [];
+        field.placeholder = h;
+        field.setAttribute('aria-label', `${h} row ${rowIndex + 1}`);
+        if (initialValues[i] != null) field.value = initialValues[i];
 
-            if (includeHeader) {
-                lines.push(headers.map(csvEscape).join(','));
-            }
-            rows.forEach(r => lines.push(r.map(v => csvEscape(v)).join(',')));
+        // Save to storage on change
+        field.addEventListener('input', throttle(saveToStorage, 300));
 
-            const csvText = '\uFEFF' + lines.join('\r\n'); // BOM for Excel compatibility
-            const blob = new Blob([csvText], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-
-            let name = (fileNameInput.value || 'data.csv').trim();
-            if (!name.toLowerCase().endsWith('.csv')) name += '.csv';
-            a.download = name;
-
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }
-
-        makeTableBtn.addEventListener('click', () => {
-            const newHeaders = sanitizeHeaders(columnsInput.value);
-            if (newHeaders.length === 0) {
-                alert('Please enter at least one column name.');
-                return;
-            }
-            headers = newHeaders;
-            buildTable();
-            addRow(); // start with one empty row
-            tableArea.style.display = 'block';
+        // If user presses Enter in last cell, add a new row
+        field.addEventListener('keydown', (e) => {
+          const isLastCell = i === headers.length - 1;
+          if (!isMultiline && isLastCell && e.key === 'Enter') {
+            e.preventDefault();
+            addRow();
+            focusCell(tbody.rows.length - 1, 0);
+          }
         });
 
-        addRowBtn.addEventListener('click', () => addRow());
-        clearRowsBtn.addEventListener('click', () => {
-            const tbody = dataTable.querySelector('tbody');
-            tbody.innerHTML = '';
+        td.appendChild(field);
+        tr.appendChild(td);
+      });
+
+      const tdActions = document.createElement('td');
+      const delBtn = document.createElement('button');
+      delBtn.type = 'button';
+      delBtn.textContent = 'Delete';
+      delBtn.className = 'danger';
+      delBtn.setAttribute('aria-label', `Delete row ${rowIndex + 1}`);
+      delBtn.onclick = () => { tr.remove(); saveToStorage(); };
+      tdActions.appendChild(delBtn);
+      tr.appendChild(tdActions);
+
+      tbody.appendChild(tr);
+    }
+
+    function focusCell(r, c) {
+      const tbody = dataTable.querySelector('tbody');
+      const cell = tbody?.rows?.[r]?.cells?.[c]?.querySelector('input,textarea');
+      if (cell) cell.focus();
+    }
+
+    function tableToArray() {
+      const rows = [];
+      const tbody = dataTable.querySelector('tbody');
+      [...tbody.rows].forEach(tr => {
+        const values = [...tr.cells].slice(0, headers.length).map(td => (td.querySelector('input,textarea')?.value) ?? '');
+        const allBlank = values.every(v => String(v).trim() === '');
+        if (allBlank) return; // skip blank row
+        rows.push(values);
+      });
+      return rows;
+    }
+
+    // Basic validators keyed by exact header text (case-insensitive)
+    function buildValidators() {
+      const map = {};
+      headers.forEach(h => {
+        if (/email/i.test(h)) map[h] = v => /\S+@\S+\.\S+/.test(String(v).trim());
+        if (/phone|mobile|contact/i.test(h)) map[h] = map[h] || (v => /^[\d\s().+\-]{7,}$/.test(String(v).trim()));
+      });
+      return map;
+    }
+
+    function validateRows() {
+      const validators = buildValidators();
+      let ok = true;
+      const tbody = dataTable.querySelector('tbody');
+
+      // clear previous errors
+      tbody.querySelectorAll('input,textarea').forEach(el => el.classList.remove('error'));
+
+      [...tbody.rows].forEach(tr => {
+        headers.forEach((h, i) => {
+          const el = tr.cells[i].querySelector('input,textarea');
+          const v = (el.value || '').trim();
+          const check = validators[h];
+          if (check && !check(v)) {
+            el.classList.add('error');
+            ok = false;
+          }
         });
-        downloadBtn.addEventListener('click', downloadCSV);
-    </script>
+      });
+
+      return ok;
+    }
+
+    function mitigateExcelFormulaInjection(s) {
+      return /^[=\-+@]/.test(s) ? "'" + s : s;
+    }
+
+    function csvEscape(value) {
+      const raw = String(value ?? '');
+      const safe = mitigateExcelFormulaInjection(raw);
+      const needsQuotes = /[",\n\r]/.test(safe);
+      const v = safe.replace(/"/g, '""');
+      return needsQuotes ? `"${v}"` : v;
+    }
+
+    function normalizeFilename(name) {
+      let n = (name || 'data.csv').trim().replace(/[^A-Za-z0-9._-]/g, '_');
+      if (!/\.csv$/i.test(n)) n += '.csv';
+      return n;
+    }
+
+    function downloadCSV() {
+      if (headers.length === 0) {
+        alert('Please create the table by entering column names first.');
+        return;
+      }
+
+      if (!validateRows()) {
+        alert('Please fix highlighted fields (e.g., invalid email/phone) before exporting.');
+        return;
+      }
+
+      const rows = tableToArray();
+      const delim = delimiterSel.value || ',';
+      const lines = [];
+
+      if (includeHeaderEl.checked) {
+        lines.push(headers.map(csvEscape).join(delim));
+      }
+      rows.forEach(r => lines.push(r.map(v => csvEscape(v)).join(delim)));
+
+      const csvText = '\uFEFF' + lines.join('\r\n'); // BOM + CRLF for Excel
+      const blob = new Blob([csvText], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = normalizeFilename(fileNameInput.value);
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    // Persist & restore (localStorage)
+    const LS_KEY = 'csv_builder_state_v1';
+    function saveToStorage() {
+      try {
+        const state = {
+          headers,
+          rows: tableToArray(),
+          fileName: fileNameInput.value,
+          includeHeader: includeHeaderEl.checked,
+          delimiter: delimiterSel.value,
+        };
+        localStorage.setItem(LS_KEY, JSON.stringify(state));
+      } catch { /* ignore */ }
+    }
+
+    function restoreFromStorage() {
+      try {
+        const raw = localStorage.getItem(LS_KEY);
+        if (!raw) return false;
+        const state = JSON.parse(raw);
+        if (!Array.isArray(state.headers) || state.headers.length === 0) return false;
+
+        headers = state.headers;
+        buildTable();
+        (state.rows || []).forEach(vals => addRow(vals));
+        if ((state.rows || []).length === 0) addRow();
+
+        fileNameInput.value = state.fileName || 'data.csv';
+        includeHeaderEl.checked = !!state.includeHeader;
+        if (state.delimiter) delimiterSel.value = state.delimiter;
+
+        columnsInput.value = headers.join(', ');
+        tableArea.style.display = 'block';
+        return true;
+      } catch {
+        return false;
+      }
+    }
+
+    function throttle(fn, wait = 200) {
+      let t = 0, lastArgs;
+      return (...args) => {
+        const now = Date.now();
+        lastArgs = args;
+        if (now - t >= wait) {
+          t = now; fn(...lastArgs);
+        }
+      };
+    }
+
+    // --- Events
+    makeTableBtn.addEventListener('click', () => {
+      const newHeaders = sanitizeHeaders(columnsInput.value);
+      if (newHeaders.length === 0) {
+        alert('Please enter at least one column name.');
+        return;
+      }
+      const hasRows = dataTable.querySelector('tbody')?.rows.length;
+      if (hasRows && !confirm('Recreating the table will clear existing rows. Continue?')) return;
+
+      headers = newHeaders;
+      buildTable();
+      addRow(); // start with one empty row
+      tableArea.style.display = 'block';
+      saveToStorage();
+    });
+
+    addRowBtn.addEventListener('click', () => { addRow(); saveToStorage(); });
+
+    clearRowsBtn.addEventListener('click', () => {
+      if (!dataTable.querySelector('tbody')?.rows.length) return;
+      if (!confirm('Clear all rows?')) return;
+      dataTable.querySelector('tbody').innerHTML = '';
+      saveToStorage();
+    });
+
+    downloadBtn.addEventListener('click', downloadCSV);
+
+    includeHeaderEl.addEventListener('change', saveToStorage);
+    delimiterSel.addEventListener('change', saveToStorage);
+    fileNameInput.addEventListener('input', throttle(saveToStorage, 300));
+    columnsInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); makeTableBtn.click(); }
+    });
+
+    // Paste handler: paste TSV/CSV/lines to add rows
+    dataTable.addEventListener('paste', (e) => {
+      const t = (e.clipboardData || window.clipboardData)?.getData('text');
+      if (!t || headers.length === 0) return;
+      const tbody = dataTable.querySelector('tbody');
+      if (!tbody) return;
+
+      // Detect if it's likely Excel/Sheets (TSV) or CSV
+      const hasTabs = /\t/.test(t);
+      const lines = t.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n').filter(l => l.length);
+      if (!lines.length) return;
+
+      e.preventDefault();
+
+      lines.forEach(line => {
+        const parts = hasTabs ? line.split('\t') : line.split(',');
+        addRow(parts.slice(0, headers.length));
+      });
+      saveToStorage();
+    });
+
+    // Initial restore (if present); otherwise keep UI hidden until user creates a table
+    restoreFromStorage();
+  </script>
 </body>
 </html>
